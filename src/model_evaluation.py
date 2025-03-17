@@ -5,6 +5,8 @@ import logging
 import pickle
 from sklearn.metrics import accuracy_score, precision_score, recall_score, roc_auc_score
 import json
+from dvclive import Live
+import yaml
 
 def logging_func(log_dir:str, name_log:str, file_name:str):
 
@@ -38,6 +40,15 @@ def logging_func(log_dir:str, name_log:str, file_name:str):
 
     return logger
 
+def load_parms(logger, parm_path:str) -> dict:
+    try:
+        with open(parm_path, 'r') as file:
+            parms = yaml.safe_load(file)
+        logger.debug(f"Parms loaded successfully")
+        return parms
+    except Exception as e:
+        logger.error(f"Exception raised : {e}")
+
 def load_model(logger, model_path:str):
     try:
         with open(model_path, 'rb') as file:
@@ -56,7 +67,7 @@ def load_data(logger, data_path:str) -> pd.DataFrame:
     except Exception as e:
         logger.error(f"Exception raised : {e}")
 
-def model_evaluation(logger, model, test_data:pd.DataFrame) -> dict:
+def model_evaluation(logger, params, model, test_data:pd.DataFrame) -> dict:
     try:
         #segregating X_test, y_test
         X_test = test_data.iloc[:,:-1]
@@ -79,6 +90,14 @@ def model_evaluation(logger, model, test_data:pd.DataFrame) -> dict:
             'recall': recall,
             'auc': auc
         }
+
+        # Experiment tracking using dvclive
+        with Live(save_dvc_exp=True) as live:
+            live.log_metric('accuracy', accuracy_score(y_test, y_pred))
+            live.log_metric('precision', precision_score(y_test, y_pred))
+            live.log_metric('recall', recall_score(y_test, y_pred))
+
+            live.log_params(params)
 
         #logger
         logger.debug("Model evaluation parameters generated")
@@ -104,10 +123,7 @@ def save_dict(logger, saving_path:str, file_name_to_save:str, metrics_dict:dict)
     except Exception as e:
         logger.error(f"Exception raised : {e}")
 
-def main(log_dir, name_log, file_name, model_path, data_path, saving_path, file_name_to_save):
-
-    #logging
-    logger = logging_func(log_dir, name_log, file_name)
+def main(logger, params, model_path, data_path, saving_path, file_name_to_save):
 
     #load model
     model = load_model(logger, model_path)
@@ -116,7 +132,7 @@ def main(log_dir, name_log, file_name, model_path, data_path, saving_path, file_
     test_data = load_data(logger, data_path)
 
     #Model evaluation
-    metrics_dict = model_evaluation(logger, model, test_data)
+    metrics_dict = model_evaluation(logger, params, model, test_data)
 
     #Save dictionary
     save_dict(logger, saving_path, file_name_to_save, metrics_dict)
@@ -125,11 +141,23 @@ def main(log_dir, name_log, file_name, model_path, data_path, saving_path, file_
     logger.debug("Model Evaluation phase completed successfully")
 
 if __name__ == "__main__":
+
+    #parms
     log_dir = "logs"
     name_log = "model_evaluation"
     file_name = "model_evaluation.log"
+
+    #logger
+    logger = logging_func(log_dir, name_log, file_name)
+
+    #parms
+    parm_path = "params.yaml"
+    params = load_parms(logger, parm_path)
+
+    #others
     model_path = os.path.join("model", "model.pkl")
     data_path = os.path.join("data", "feature_engineering", "test_data.csv")
     saving_path = os.path.join("reports")
     file_name_to_save = "metrics_data.json"
-    main(log_dir, name_log, file_name, model_path, data_path, saving_path, file_name_to_save) 
+
+    main(logger, params, model_path, data_path, saving_path, file_name_to_save) 

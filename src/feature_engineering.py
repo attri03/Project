@@ -3,6 +3,7 @@ import numpy as np
 from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 import logging
 import os
+import yaml
 
 def logging_func(log_dir:str, name_log:str, file_name:str):
 
@@ -35,6 +36,15 @@ def logging_func(log_dir:str, name_log:str, file_name:str):
     logger.addHandler(file_handler)
 
     return logger
+
+def load_parms(logger, parm_path:str) -> dict:
+    try:
+        with open(parm_path, 'r') as file:
+            parms = yaml.safe_load(file)
+        logger.debug(f"Parms loaded successfully")
+        return parms
+    except Exception as e:
+        logger.error(f"Exception raised : {e}")
 
 def load_data(logger, train_data_path:str, test_data_path:str) -> tuple:
 
@@ -100,10 +110,7 @@ def save_data(logger, train_data:pd.DataFrame, test_data:pd.DataFrame, saving_pa
     except Exception as e:
         logger.error(f"Exception raised : {e}")
 
-def main(log_dir:str, name_log:str, file_name:str, train_data_path:str, test_data_path:str, max_features:int, text_column:str, target_column:str, saving_path:str, train_data_file_name:str, test_data_file_name:str):
-    
-    #Calling logging function
-    logger = logging_func(log_dir, name_log, file_name)
+def main(logger, train_data_path:str, test_data_path:str, max_features:int, text_column:str, target_column:str, saving_path:str, train_data_file_name:str, test_data_file_name:str):
 
     #Calling loading data function
     train_data, test_data = load_data(logger, train_data_path, test_data_path)
@@ -118,17 +125,27 @@ def main(log_dir:str, name_log:str, file_name:str, train_data_path:str, test_dat
     logger.debug("Feature Engineering Phase completed successfully")
 
 if __name__ == "__main__":
+
     #Parms
     log_dir = "logs"
     name_log = "feature_engineering"
     file_name = "feature_engineering.log"
+
+    #Calling logging function
+    logger = logging_func(log_dir, name_log, file_name)
+
+    #parms
+    parm_path = "params.yaml"
+    params = load_parms(logger, parm_path)
+    max_features = params['feature_engineering']['max_features']
+
+    #other
     train_data_path = os.path.join("data", "data_preprocessing", "train_data.csv")
     test_data_path = os.path.join("data", "data_preprocessing", "test_data.csv")
-    max_features = 500
     text_column = 'transformed_text'
     target_column = 'target'
     saving_path = os.path.join('data', 'feature_engineering')
     train_data_file_name = "train_data.csv"
     test_data_file_name = "test_data.csv"
 
-    main(log_dir, name_log, file_name, train_data_path, test_data_path, max_features, text_column, target_column, saving_path, train_data_file_name, test_data_file_name)
+    main(logger, train_data_path, test_data_path, max_features, text_column, target_column, saving_path, train_data_file_name, test_data_file_name)

@@ -11,7 +11,10 @@ from wordcloud import WordCloud
 
 #Downloading required resources
 nltk.download('stopwords') 
-nltk.download('punkt') 
+try:
+    nltk.download('punkt') 
+except:
+    nltk.download('punkt_tab') 
 
 def logging_func(log_dir:str, name_log:str, file_name:str):
 

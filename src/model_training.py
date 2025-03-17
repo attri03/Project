@@ -5,6 +5,7 @@ import os
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.model_selection import train_test_split
 import pickle
+import yaml
 
 def logging_func(log_dir:str, name_log:str, file_name:str):
 
@@ -38,6 +39,15 @@ def logging_func(log_dir:str, name_log:str, file_name:str):
 
     return logger
 
+def load_parms(logger, parm_path:str) -> dict:
+    try:
+        with open(parm_path, 'r') as file:
+            parms = yaml.safe_load(file)
+        logger.debug(f"Parms loaded successfully")
+        return parms
+    except Exception as e:
+        logger.error(f"Exception raised : {e}")
+
 def load_data(logger, data_path:str) -> pd.DataFrame:
     try:
         df = pd.read_csv(data_path)
@@ -45,9 +55,6 @@ def load_data(logger, data_path:str) -> pd.DataFrame:
         return df
     except Exception as e:
         logger.error(f"Exception raised : {e}")
-
-n_estimators = 50
-random_state = 2
 
 def train_model(logger, n_estimators:int, random_state:int, train_data:pd.DataFrame) -> RandomForestClassifier:
     try:
@@ -76,9 +83,8 @@ def save_model(logger, rfc:RandomForestClassifier, saving_location:str, saving_f
     except Exception as e:
         logger.error(f"Exception raised : {e}")
 
-def main(log_dir, name_log, file_name, data_path, n_estimators, random_state, saving_location, saving_file_name):
-    #Calling logger
-    logger = logging_func(log_dir, name_log, file_name)
+def main(logger, data_path, n_estimators, random_state, saving_location, saving_file_name):
+
     #loading data
     train_data = load_data(logger, data_path)
     #training model
@@ -89,12 +95,24 @@ def main(log_dir, name_log, file_name, data_path, n_estimators, random_state, sa
     logger.debug("Completed the model building phase")
 
 if __name__ == "__main__":
+
+    #Parms
     log_dir = "logs"
-    name_log = "model_building"
-    file_name = "model_building.log"
+    name_log = "model_training"
+    file_name = "model_training.log"
+
+    #Calling logging function
+    logger = logging_func(log_dir, name_log, file_name)
+
+    #parms
+    parm_path = "params.yaml"
+    params = load_parms(logger, parm_path)
+    n_estimators = params['model_training']['n_estimators']
+    random_state = params['model_training']['random_state']
+
+    #others
     data_path = os.path.join("data", "feature_engineering", "train_data.csv")
-    n_estimators = 50
-    random_state = 2
     saving_location = os.path.join('model')
     saving_file_name = "model.pkl"
-    main(log_dir, name_log, file_name, data_path, n_estimators, random_state, saving_location, saving_file_name)
+
+    main(logger, data_path, n_estimators, random_state, saving_location, saving_file_name)

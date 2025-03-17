@@ -3,6 +3,7 @@ import numpy as np
 import logging
 import os
 from sklearn.model_selection import train_test_split
+import yaml
 
 def logging_func(log_dir:str, name_log:str, file_name:str):
 
@@ -35,6 +36,15 @@ def logging_func(log_dir:str, name_log:str, file_name:str):
     logger.addHandler(file_handler)
 
     return logger
+
+def load_parms(logger, parm_path:str) -> dict:
+    try:
+        with open(parm_path, 'r') as file:
+            parms = yaml.safe_load(file)
+        logger.debug(f"Parms loaded successfully")
+        return parms
+    except Exception as e:
+        logger.error(f"Exception raised : {e}")
 
 def load_data(logger, data_path:str) -> pd.DataFrame:
     try:
@@ -72,10 +82,7 @@ def save_data(logger, train_data:pd.DataFrame, test_data:pd.DataFrame, saving_pa
     except Exception as e:
         logger.error(f"Exception raised : {e}")
 
-def main(log_dir, name_log, file_name, data_path, target_column_name, text_column_name, test_size, saving_path, train_data_file_name, test_data_file_name):
-
-    #Calling logging function
-    logger = logging_func(log_dir, name_log, file_name)
+def main(logger, data_path, target_column_name, text_column_name, test_size, saving_path, train_data_file_name, test_data_file_name):
 
     #Calling loading data function
     data = load_data(logger, data_path)
@@ -95,13 +102,22 @@ if __name__ == "__main__":
     log_dir = "logs"
     name_log = "data_ingestion"
     file_name = "data_ingestion.log"
+
+    #Calling logging function
+    logger = logging_func(log_dir, name_log, file_name)
+
+    #Load test_size
+    parm_path = "params.yaml"
+    params = load_parms(logger, parm_path)
+    test_size = params['data_ingestion']['test_size']
+
+    #other parms
     data_path = "experiments\spam.csv"
     target_column_name = "target"
     text_column_name = "text"
-    test_size = 0.2
     saving_path = os.path.join('data', 'data_ingestion')
     train_data_file_name = 'train_data.csv'
     test_data_file_name = 'test_data.csv'
 
     #Calling main function
-    main(log_dir, name_log, file_name, data_path, target_column_name, text_column_name, test_size, saving_path, train_data_file_name, test_data_file_name)
+    main(logger, data_path, target_column_name, text_column_name, test_size, saving_path, train_data_file_name, test_data_file_name)
